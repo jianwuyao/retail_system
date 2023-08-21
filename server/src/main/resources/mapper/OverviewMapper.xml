@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwyao.system.mapper.OverviewMapper">
+
+    <select id="getPopularThing" resultType="java.util.HashMap">
+        select A.title, count(A.thing_id) as num
+        from order_detail A
+        group by A.title
+        order by num desc limit 5;
+    </select>
+
+    <select id="getPopularClassification" resultType="java.util.HashMap">
+        select B.title, count(B.title) as num
+        from order_detail A
+        join classification B on A.classification_id = B.id
+        group by B.title
+        order by num desc limit 5;
+    </select>
+
+    <select id="getWebVisitData" parameterType="java.lang.String" resultType="integer">
+        select count(A.re_ip) as num
+        from operation_log A
+        <where>
+        <if test="day != null">
+            A.re_time like CONCAT('%',#{day},'%')
+        </if>
+        </where>
+        group by A.re_ip
+    </select>
+</mapper>

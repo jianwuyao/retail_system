@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwyao.system.mapper.ThingWishMapper">
+
+    <select id="getUserWishList" resultType="com.jwyao.system.entity.ThingWish">
+        select A.id, B.id as thing_id, B.title, B.cover
+        from thing_wish A
+        join thing B on (A.thing_id = B.id)
+        where A.user_id = #{userId};
+    </select>
+
+    <select id="getThingWishCount" resultType="integer">
+        select count(A.id)
+        from thing_wish A
+        where A.thing_id = #{thingId};
+    </select>
+
+</mapper>

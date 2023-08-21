@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jwyao.system.mapper.CommentMapper">
+
+    <select id="getList" resultType="com.jwyao.system.entity.Comment">
+        select A.*, B.username, C.title
+        from comment as A
+        join users as B on (A.user_id = B.id)
+        join thing as C on (A.thing_id = C.id)
+        order by A.create_time desc;
+    </select>
+
+    <select id="selectThingCommentList" resultType="com.jwyao.system.entity.Comment">
+        select A.*, B.username, C.title
+        from comment as A
+        join users as B on (A.user_id = B.id)
+        join thing as C on (A.thing_id = C.id)
+        <if test="thingId != null">
+            where A.thing_id = #{thingId}
+        </if>
+        <if test="order == 'recent'">
+            order by A.create_time desc;
+        </if>
+        <if test="order == 'hot'">
+            order by A.like_count desc;
+        </if>
+    </select>
+
+    <select id="selectUserCommentList" resultType="com.jwyao.system.entity.Comment">
+        select A.*, B.username, C.title, C.cover
+        from comment as A
+        join users as B on (A.user_id = B.id)
+        join thing as C on (A.thing_id = C.id)
+        <if test="userId != null">
+            where A.user_id = #{userId}
+        </if>
+        order by A.create_time desc;
+    </select>
+
+    <select id="getThingCommentCount" resultType="integer">
+        select count(A.id)
+        from comment A
+        where A.thing_id = #{thingId};
+    </select>
+
+</mapper>

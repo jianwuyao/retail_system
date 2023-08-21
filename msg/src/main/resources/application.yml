@@ -1,0 +1,32 @@
+server:
+  # 配置端口号
+  port: 8082
+
+spring:
+  application:
+    # 配置应用名称
+    name: rabbit_mq_msg
+  # 配置RabbitMQ
+  rabbitmq:
+    host: 192.168.100.100
+    port: 5672
+    virtual-host: /
+    username: root
+    password: root
+  # 发送邮件配置
+  mail:
+    # 配置smtp服务器地址
+    host: smtp.qq.com
+    # 配置smtp服务器端口
+    port: 587
+    # 配置发送方邮箱地址
+    username: 1121776571@qq.com
+    # 配置QQ邮箱授权码
+    password: phynvzvnnkvihdcc
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          # 配饰SSL加密工厂
+          socketFactoryClass: javax.net.ssl.SSLSocketFactory
+        debug: true
