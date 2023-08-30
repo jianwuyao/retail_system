@@ -3,17 +3,17 @@ package com.jwyao.system.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jwyao.system.common.BaseContext;
 import com.jwyao.system.entity.*;
+import com.jwyao.system.factory.IMessage;
+import com.jwyao.system.factory.MessageFactory;
 import com.jwyao.system.mapper.ThingMapper;
 import com.jwyao.system.service.*;
 import com.jwyao.system.mapper.OrderMapper;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,9 +25,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
-
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
 
     @Autowired
     private OrderMapper orderMapper;
@@ -135,9 +132,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     public void updateOrder(Order order) {
         String status = order.getStatus();
+        IMessage message = MessageFactory.getInstance("email");
         if ("2".equals(status)) {
             order.setPayTime(LocalDateTime.now());
-            sendMsg(order.getId(), status);
+            if (message != null) {
+                Object msg = message.createMsg(order.getId(), status);
+                if (msg != null) {
+                    message.sendMsg(msg);
+                }
+            }
         } else if ("7".equals(status)) {
             // 回退库存
             HashOperations<String, String, String> ops = stringRedisTemplate.opsForHash();
@@ -148,7 +151,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 Thing thing = thingMapper.selectById(orderDetail.getThingId());
                 ops.put("thingRepertory", String.valueOf(orderDetail.getThingId()), String.valueOf(thing.getRepertory()));
             }
-            sendMsg(order.getId(), status);
+            if (message != null) {
+                Object msg = message.createMsg(order.getId(), status);
+                if (msg != null) {
+                    message.sendMsg(msg);
+                }
+            }
         }
         orderMapper.updateById(order);
     }
@@ -160,37 +168,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             List<OrderDetail> orderDetails = orderDetailService.getOrderDetailList(userOrder.getId());
             userOrder.setOrderDetails(orderDetails);
         })).collect(Collectors.toList());
-    }
-
-    public void sendMsg(Long orderId, String status) {
-        // MQ异步发送通知邮件
-        Order orderInfo = orderMapper.selectById(orderId);
-        User userDetail = userService.getUserDetail(orderInfo.getUserId());
-        if (userDetail.getPushSwitch() != null && userDetail.getPushSwitch() == 1 && userDetail.getPushEmail() != null) {
-            List<OrderDetail> orderDetails = orderDetailService.getOrderDetailList(orderId);
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            Map<String, String> msg = new HashMap<>();
-            msg.put("pushEmail", userDetail.getPushEmail());
-            msg.put("userName", orderInfo.getUserName());
-            msg.put("orderId", String.valueOf(orderInfo.getId()));
-            msg.put("currentTime", formatter.format(LocalDateTime.now()));
-            msg.put("status", status);
-            if ("2".equals(status)) {
-                StringBuilder detailInfo = new StringBuilder();
-                for (OrderDetail orderDetail : orderDetails) {
-                    detailInfo.append(orderDetail.getTitle())
-                            .append("_￥").append(orderDetail.getPrice())
-                            .append("_X").append(orderDetail.getNumber())
-                            .append("  ");
-                }
-                msg.put("detailInfo", detailInfo.toString());
-                msg.put("amount", orderInfo.getAmount());
-                msg.put("receiverName", orderInfo.getReceiverName());
-                msg.put("receiverPhone", orderInfo.getReceiverPhone());
-                msg.put("receiverAddress", orderInfo.getReceiverAddress());
-            }
-            rabbitTemplate.convertAndSend("msg.direct", "email", msg);
-        }
     }
 
 }
